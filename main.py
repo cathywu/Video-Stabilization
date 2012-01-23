@@ -26,36 +26,71 @@ class Video:
     def get_image(self):
         return self.im
 
-vid = Video(DATA_PATH)
-vid.step(stepsize=31)
+class Flow:
+    def __init__(self,im1,im2,win=10):
+        self.im1 = im1
+        self.im2 = im2
+        self.win = win
+        (self.u, self.v) = self.compute_flow()
+        (self.vert, self.hor) = self.estimate_camera_motion()
+    def compute_flow(self):
+        # lucas kanade
+        #[http://ascratchpad.blogspot.com/2011/10/optical-flow-lucas-kanade-in-python.html]
+        return lk.lk(self.im1,self.im2,self.win)
+    def estimate_camera_motion(self):
+        return np.average(self.u)*120*160/108/148,np.average(self.v)*120*160/108/148
+    def adjust(self,x=0,y=0):
+        #TODO remove this mess of hardcode case handling
+        temp = self.im2.copy()
+        if int(x) == 0:
+            if y >= 0:
+                temp[:,int(y):] = self.im2[:,:-int(y)]
+            else:
+                temp[:,:-int(y)] = self.im2[:,int(y):]
+        elif int(y) == 0:
+            if x >= 0:
+                temp[int(x):,:] = self.im2[:-int(x),:]
+            else:
+                temp[:-int(x),:] = self.im2[int(x):,:]
+        elif x >= 0 and y >= 0:
+            temp[int(x):,int(y):] = self.im2[:-int(x),:-int(y)]
+        elif x < 0 and y < 0:
+            temp[:int(x),:int(y)] = self.im2[-int(x):,-int(y):]
+        elif x >= 0 and y < 0:
+            temp[int(x):,:int(y)] = self.im2[:-int(x),-int(y):]
+        elif x < 0 and y >= 0:
+            temp[:int(x),int(y):] = self.im2[-int(x):,:-int(y)]
+        else:
+            print "Error: unhandled case (%s,%s)" % (x,y)
+        return temp 
+    def show_im1(self):
+        plt.imshow(self.im1,cmap='gray')
+    def show_im2(self):
+        plt.imshow(self.im2,cmap='gray')
+    def show_adjust(self,x=0,y=0):
+        plt.imshow(self.adjust(x,y),cmap='gray')
 
-# lucas kanade
-#[http://ascratchpad.blogspot.com/2011/10/optical-flow-lucas-kanade-in-python.html]
-end = None
-plt.figure()
-plt.show()
-while end != "q":
+def next_flow():
     plt.clf()
     win=10
     im1 = vid.step(30)
-    im2 = vid.step(4)
-    u,v = lk.lk(im1,im2,win)
-    print u,v
-    print u.max(),v.max()
-    print u.min(),v.min()
-    #plt.imshow((u**2+v**2)**0.5)
-    plt.imshow(im1,cmap='gray')
-    raw_input()
-    plt.imshow(im2,cmap='gray')
-    raw_input()
-    plt.hold(True)
-    plt.plot(np.nonzero(v>0.01)[1],np.nonzero(v>0.01)[0],'+b')
-    plt.plot(np.nonzero(u>0.01)[1],np.nonzero(u>0.01)[0],'+r')
+    im2 = vid.step(6)
+    f = Flow(im1,im2)
+    print 'im1'
+    f.show_im1()
     plt.show()
-    #plt.imshow(im1np, cmap='gray')
-    #plt.hold(True)
-    #plt.plot(x,y,'+r');
-    #plt.plot(x+u*3,y+v*3,'og')
-    #plt.show()
-    end = raw_input("Continue...")
+    raw_input()
+    print 'im2'
+    f.show_im2()
+    raw_input()
+    plt.show()
+    print "Estimate of camera motion -- x: %s y: %s" % (f.hor,f.vert)
+    print 'im adjusted'
+    f.show_adjust(f.hor,f.vert)
+    return f
+
+vid = Video(DATA_PATH)
+vid.step(stepsize=172)
+plt.figure()
+f = next_flow()
 
