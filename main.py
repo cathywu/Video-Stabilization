@@ -8,31 +8,10 @@ from SimpleCV import cv
 import lk
 import numpy as np
 import time
+from Video import Video
 
 #DATA_PATH = "/home/cathywu/Dropbox/UROP/wearable/data/exp001/compressed/iphone4s-1920r_30f_all_auto.avi"
 DATA_PATH = "/home/cathywu/Dropbox/UROP/wearable/data/exp001/compressed/firefly_fw_640r_60f_320s.avi"
-
-lk_params = dict( winSize  = (10, 10), 
-                  maxLevel = 3, 
-                  criteria = (cv.CV_TERMCRIT_EPS | cv.CV_TERMCRIT_ITER, 20, 0.03),
-                  derivLambda = 0.0 )    
-class Video:
-    def __init__(self,path):
-        self.capture = scv.VirtualCamera(path,"video")
-        self.im = None
-    def step(self,stepsize=1,scale=0.50):
-        for i in range(stepsize-1):
-            self.capture.getImage()
-        self.im = self.capture.getImage().copy().scale(scale)
-        return self.get_image()
-    def show(self):
-        plt.figure()
-        plt.show()
-        plt.imshow(self.im,cmap="gray")
-    def get_image(self):
-        return self.im
-    def save(self):
-        pass
 
 class Flow:
     def __init__(self,im1,im2,win=10):

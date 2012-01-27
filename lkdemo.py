@@ -6,6 +6,9 @@ import sys
 
 # import the necessary things for OpenCV and video reading
 from main import Video, DATA_PATH
+from VideoStateMachine import VideoStateMachine, VideoState
+from RingBuffer import RingBuffer
+from Video import Video
 from SimpleCV import cv
 
 #############################################################################
@@ -69,14 +72,15 @@ if __name__ == '__main__':
           "To add/remove a feature point click it\n"
 
     # first, create the necessary windows
-    cv.NamedWindow ('LkDemo', cv.CV_WINDOW_AUTOSIZE)
+    cv.NamedWindow ('Video Stabilization', cv.CV_WINDOW_AUTOSIZE)
 
     # register the mouse callback
-    cv.SetMouseCallback ('LkDemo', on_mouse, None)
+    cv.SetMouseCallback ('Video Stabilization', on_mouse, None)
 
     frame = video.step()
     imsize = frame.size()
     frame = frame.getBitmap()
+    state_machine = VideoStateMachine(VideoState())
     while 1:
         # do forever
 
@@ -128,15 +132,20 @@ if __name__ == '__main__':
             # we have points, so display them
 
             # calculate the optical flow
-            features, status, track_error = cv.CalcOpticalFlowPyrLK (
+            new_features, status, track_error = cv.CalcOpticalFlowPyrLK (
                 prev_grey, grey, prev_pyramid, pyramid,
                 features,
                 (win_size, win_size), 3,
                 (cv.CV_TERMCRIT_ITER|cv.CV_TERMCRIT_EPS, 20, 0.03),
                 flags)
+            agg_err = sum([e for e in track_error])
+            if agg_err > 1e-03:
+                print "Agg_err: %s" % agg_err
+                state = state_machine.next_state(features,image)
+                image = state.get_output_frame()
 
             # set back the points we keep
-            features = [ p for (st,p) in zip(status, features) if st]
+            features = [ p for (st,p) in zip(status, new_features) if st ]
 
             if add_remove_pt:
                 # we have a point to add, so see if it is close to
